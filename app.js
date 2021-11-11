@@ -1,71 +1,89 @@
-//Dependencies
-require('dotenv').config()
-const express = require('express')
-const mongoose = require('mongoose')
-const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
-const userRouter  = express.Router()
-const app = express()
+  //Dependencies
+  require('dotenv').config()
+  const express = require('express')
+  const mongoose = require('mongoose')
+  const bcrypt = require('bcrypt')
+  const jwt = require('jsonwebtoken')
+  const userRouter  = express.Router()
+  const app = express()
 
-//Credentials
-const secret = process.env.SECRET
-const dbUser = process.env.DB_USER
-const dbPass = process.env.DB_PASS
-const dbURI = `mongodb+srv://${dbUser}:${dbPass}@membredb.s67my.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
+  //Credentials
+  const secret = process.env.SECRET
+  const dbUser = process.env.DB_USER
+  const dbPass = process.env.DB_PASS
+  const dbURI = `mongodb+srv://${dbUser}:${dbPass}@membredb.s67my.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
 
-//Middlewares
-app.use(express.json())
-app.use('/api/user', userRouter)
-userRouter.use(tokenValidate)
+  //Middlewares
+  app.use(express.json())
+  app.use('/api/user', userRouter)
+  userRouter.use(tokenValidate)
 
-function tokenValidate(req, res, next){
-  const auth = req.headers['authorization']
-  const token = auth.split(' ')[1]
+  function tokenValidate(req, res, next){
+    const auth = req.headers['authorization']
+    const token = auth.split(' ')[1]
 
-  if(!token)return res.status(401).json({ error: "I'm sorry, no acess for you"})
-  try{
-    req.token = jwt.verify(token, secret)
-    next()
-  }catch(erro){
-    res.status(400).json({error: "Fake Token"})
+    if(!token)return res.status(401).json({ error: "I'm sorry, no acess for you"})
+    try{
+      req.token = jwt.verify(token, secret)
+      next()
+    }catch(erro){
+      res.status(400).json({error: "Fake Token"})
+    }
   }
-}
 
-//Models
-const User = require('./models/User')
-const Deck = require('./models/Deck')
+  //Models
+  const User = require('./models/User')
+  const Deck = require('./models/Deck')
 
-app.get("/", (req, res)=>{
-  res.status(200).json({
-    msg:"Bem vindo"
-  });
-})
+  app.get("/", (req, res)=>{
+    res.status(200).json({
+      msg:"Bem vindo"
+    });
+  })
 
-userRouter.get('/', async(req, res)=>{
-  console.log(req.token)
-  const user = await User.findOne({ _id:req.token.id }, { 'name':1, 'profile':1, 'decks': 1 })
-  res.status(200).json(user)
-})
+  userRouter.get('/', async(req, res)=>{
+    console.log(req.token)
+    const user = await User.findOne({ _id:req.token.id }, { 'name':1, 'profile':1, 'decks': 1 })
+    res.status(200).json(user)
+  })
 
+
+
+//Start of create deck
 userRouter.post('/createDeck', async(req, res)=>{
   console.log("Criando deck para user "+req.token.id)
   const { deckName, deckDesc, deckImg } = req.body
   
   if( typeof(deckName ) == 'undefined' ) return res.status(422).json({erro:"missing deck name"})
-  let deck = { deckName: deckName }
+  let deck = { 
+    deckName: deckName,
+    belong: req.token.id
+  }
   if( deckDesc ) deck["deckDesc"] = deckDesc
   if( deckImg ) deck["deckImg"] = deckImg
-  console.log(deck)
+    console.log(deck)
   const deckModel = new Deck(deck)
   try {
-    const deckStatus = await deckModel.save()
-    deck["_id"] = deckStatus._id
-    await User.updateOne({ _id:req.token.id }, { $addToSet: { decks: deck }})  
-    res.status(200).json({msg:"Deck created"})
+    const verifyExist = await Deck.findOne({
+      deckName: deck.deckName, 
+      belong: deck.belong
+    })
+    console.log("Existe?")
+    console.log(verifyExist)
+    if(verifyExist) res.status(422).json({ erro:"You already have this deck"})
+    else{
+      const deckStatus = await deckModel.save()
+      deck["_id"] = deckStatus._id
+      await User.updateOne({ _id:req.token.id }, { $addToSet: { decks: deck }})  
+      res.status(200).json({msg:"Deck created"})
+    }
   } catch (error) {
     res.status(500).json({erro:"Not able to create deck"})
   }
 })
+//End of create deck
+
+
 
 // Start - Register user
 app.post('/auth/register', async(req, res) => {
