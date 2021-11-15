@@ -6,6 +6,7 @@ const User = mongoose.model("User", {
   name: String,
   email: String,
   password: String,
+  profilePicture: String,
   decks: [{ 
     deckId: ObjectId,
     deckName: String,
