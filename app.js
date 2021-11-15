@@ -5,7 +5,6 @@ const mongoose = require('mongoose')
 const app = express()
 
 //Credentials
-const secret = process.env.SECRET
 const dbUser = process.env.DB_USER
 const dbPass = process.env.DB_PASS
 const dbURI = `mongodb+srv://${dbUser}:${dbPass}@membredb.s67my.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
@@ -37,6 +36,7 @@ function tokenValidate(req, res, next){
 
 //Start request /
 app.get("/", (req, res)=>{
+  console.log(req)
   res.status(200).json({
     msg:"Bem vindo"
   });

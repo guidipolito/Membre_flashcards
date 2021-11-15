@@ -3,6 +3,13 @@ const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 const authRoute = require('express').Router()
 
+//Credentials
+const secret = process.env.SECRET
+const secretRefresh = process.env.SECRET_REFRESH
+
+//models
+const Access = require('../models/Access')
+const User = require('../models/User')
 // Start - Register user
 authRoute.post('/register', async(req, res) => {
   const { name, email, password, confirmPassword } = req.body
@@ -53,14 +60,25 @@ authRoute.post('/login', async(req, res) =>{
   const passwordEqual = await bcrypt.compare(password, user.password)
   if( !passwordEqual )return res.status(422).json({ error:"Wrong password" })
   try{
-    const token = jwt.sign({ id: user._id }, secret )
-    return res.status(200).json({ msg:"Logged in", token:token })
+    const refreshToken = jwt.sign({ id: user._id }, secretRefresh )
+    const access = new Access({
+      refresh_token: refreshToken,
+      last_used: new Date(),
+      device: req.headers['user-agent'],
+      belong: user._id
+    })
+    await access.save()
+    const token = jwt.sign({ id: user._id }, secret, { expiresIn: '0.5h' } )
+    return res.status(200).json({ msg:"Logged in", refresh:refreshToken, token })
   }catch (error){
     console.log(error)
     return res.status(500).json({error:"We're having problems"})
   }
 })
 //End - Login User
+
+//Refresh
+
 
 module.exports = authRoute
 
