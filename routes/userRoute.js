@@ -12,6 +12,7 @@ userRouter.get('/', async(req, res)=>{
     const user = await User.findOne({ _id:req.token.id }, { 'name':1, 'profilePicture':1, 'decks': 1 })
     res.status(200).json(user)
   }catch(error){
+    console.log(error)
     res.status(500).json({'error':"Something bad happened while getting your data, I'm sorry for that"})
   }
 })

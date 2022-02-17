@@ -80,7 +80,7 @@ authRoute.post('/login', async(req, res) =>{
 //End - Login User
 
 //Refresh
-authRoute.post('/refresh', async(req, res)=>{
+authRoute.get('/refresh', async(req, res)=>{
   const auth = req.headers['authorization']
   const refreshHash = auth ? auth.split(' ')[1] : false
 
